@@ -9,6 +9,9 @@ else {
   Install-Module ps-autoenv
 }
 
+# Ran as Administrator?
+$IsAdmin = (New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+
 
 # powershell equivalent of touch
 function touch {
@@ -99,9 +102,27 @@ function prompt {
   $p = Split-Path -leaf -path (Get-Location)
 
   #Changes Window Title to CWD
-  $Host.ui.rawui.windowtitle = "$d$c$p"
+  If ($isadmin) {
+    $Host.ui.rawui.windowtitle = "$d$c$p [ADMIN]"
+  } Else {
+    $Host.ui.rawui.windowtitle = "$d$c$p"
+  }
 
   $promptString = "$d$c$p [ $folders ]"
   Write-Host $promptString -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
+  If ($isadmin) {
+    return $nl+"ADMIN> "
+  } Else {
+    return "$nl> "
+  }
   return "$nl> "
 }
+
+# Adds tab completion for git commands
+Import-Module 'C:\tools\poshgit\dahlbyk-posh-git-9bda399\src\posh-git.psd1'
+
+# Use python+sympy as a symbolic calculator
+Function calc {
+  py -ic "from sympy import init_session; init_session(use_unicode=False)"
+}
+
