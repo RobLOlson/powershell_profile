@@ -49,12 +49,29 @@ $programming = $env:programming
 #And automatically supply list of folders
 function prompt {
 
-  # Check Exit Code of Last Cmdlet (White=success/Red=fail)
-  If ($?) { $bgcolor = "White" } Else { $bgcolor = "Red" }
+  $exit_code = $?
 
-  #Desired Depth
-  $MAX = 1
-  $MAX = $MAX * -1
+  $IsAdmin = (New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+
+  $bgcolor = "White"
+
+  If ($IsAdmin) { $bgcolor = "Yellow" }
+
+  If ($exit_code) {$dummy=0} Else { $bgcolor = "Red" }
+
+  $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
+  $terminal_width = (Get-Host).UI.RawUI.MaxWindowSize.Width
+
+  #Desired Depth (if path is sider than terminal window)
+  $path_width = ((pwd)[0].toString().Length)
+  if($path_width -gt $terminal_width) {
+    $MAX = 1
+    $MAX = $MAX * -1
+  }
+  else {
+    $MAX = 10
+    $MAX = $MAX*-1
+  }
 
   $folders = Get-ChildItem -Path (Get-Location) -Directory -ErrorAction SilentlyContinue | Select-Object Name
 
@@ -68,6 +85,20 @@ function prompt {
     #$folders = $folders | % { If ($_[0] -ne '.') {$_}}
 
     $folders = $folders -join ", "
+  }
+
+  $finish_line_later = 0
+
+  if( $folders.length + $path_width + 4 -gt $terminal_width) {
+    $folder_sep = [Environment]::NewLine
+    if( $MAX -eq -10) {
+      $finish_line = " " * ($terminal_width - $path_width -1) # pad end of line with spaces
+    } else {
+      $finish_line_later = 1
+    }
+    $finish_folders = " " * ($terminal_width - (($folders.length + 4) % $terminal_width))
+  } else {
+    $folder_sep = ""
   }
 
   # Get path as an array of strings
@@ -108,7 +139,11 @@ function prompt {
     $Host.ui.rawui.windowtitle = "$d$c$p"
   }
 
-  $promptString = "$d$c$p [ $folders ]"
+  if($finish_line_later){
+    $finish_line = " " * ($terminal_width - "$d$c$p".length -1)
+  }
+
+  $promptString = "$d$c$p $finish_line[ $folders ]$finish_folders"
   Write-Host $promptString -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
   If ($isadmin) {
     return $nl+"ADMIN> "
