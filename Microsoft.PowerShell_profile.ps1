@@ -96,7 +96,7 @@ function prompt {
     } else {
       $finish_line_later = 1
     }
-    $finish_folders = " " * ($terminal_width - (($folders.length + 4) % $terminal_width))
+    $finish_folders = " " * ($terminal_width - 1 - (($folders.length + 4) % $terminal_width))
   } else {
     $folder_sep = ""
   }
@@ -140,10 +140,10 @@ function prompt {
   }
 
   if($finish_line_later){
-    $finish_line = " " * ($terminal_width - "$d$c$p".length -1)
+    $finish_line = " " * ($terminal_width - "$d$c$p".length - 1)
   }
 
-  $promptString = "$d$c$p $finish_line[ $folders ]$finish_folders"
+  $promptString = "[ $folders ] $finish_folders$d$c$p $finish_line"
   Write-Host $promptString -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
   If ($isadmin) {
     return $nl+"ADMIN> "
