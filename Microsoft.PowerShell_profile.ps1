@@ -39,6 +39,33 @@ Function env {
   Write-Host "$my_env" -BackgroundColor Black -ForegroundColor Yellow
 }
 
+
+function word-wrap {
+    [CmdletBinding()]
+    Param(
+        [parameter(Mandatory=1,ValueFromPipeline=1,ValueFromPipelineByPropertyName=1)]
+        [Object[]]$chunk
+    )
+    PROCESS {
+        $Lines = @()
+        foreach ($line in $chunk) {
+            $str = ''
+            $counter = 0
+            $line -split '\s+' | %{
+                $counter += $_.Length + 1
+                if ($counter -gt $Host.UI.RawUI.BufferSize.Width-2) {
+                    $Lines += ,$str.trim()
+                    $str = ''
+                    $counter = $_.Length + 1
+                }
+                $str = "$str$_ "
+            }
+            $Lines += ,$str.trim()
+        }
+        $Lines
+    }
+}
+
 #open new terminals at project
 $project = $env:project
 $desktop = $env:desktop
@@ -54,6 +81,7 @@ function prompt {
   $IsAdmin = (New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 
   $bgcolor = "White"
+  $nl = [Environment]::NewLine
 
   If ($IsAdmin) { $bgcolor = "Yellow" }
 
@@ -65,21 +93,51 @@ function prompt {
   # Get path as an array of strings
   $path = (Split-Path -path (Get-Location)).Split('\')
   $leaf = Split-Path -leaf -path (Get-Location)
-  $max_root = $path.Length
 
   $folders = Get-ChildItem -Path (Get-Location) -Directory -ErrorAction SilentlyContinue | Select-Object Name
 
   $folders = $folders.name
+
 
   if($folders)
   {
     # Hide hidden folders
     $folders = $folders | Where {$_[0] -ne '.'}
 
-    #Alternate implmentation of above
-    #$folders = $folders | % { If ($_[0] -ne '.') {$_}}
-
     $folders = $folders -join ", "
+
+    # IF folder list requires multiple lines
+    if( $($folders.length) -gt $terminal_width) {
+      $folders = $folders | word-wrap
+
+      # indent list
+      $folders[0] = "  " + $folders[0]
+
+      # Pad the end of each line so that the background color changes appropriately
+      $i = 0
+      foreach ($line in $folders){
+        if($i -eq 0){
+          $folders[0] = $line + " " * ($terminal_width - $line.length)
+        }
+        else {
+          $folders[$i] = $line + " " * ($terminal_width - $line.length - 2)
+        }
+        $i = $i + 1
+      }
+
+      # Lines must be manually joined with new-line characters to print properly
+      $folders = $folders -join "`n  "
+
+      $fake_prompt = "> cd ..." + " " * ($terminal_width -8) + "`n"
+      $folders = $fake_prompt + $folders
+    }
+
+    # ELSE folders fit on one line
+    else {
+      $folders = "cd> " + $folders + " " * ($terminal_width - $folders.length - 4)
+    }
+  } else {
+    $folders = "cd> " + $folders + " " * ($terminal_width - $folders.length - 4)
   }
 
   # use list of path lengths walk up to the terminal width
@@ -137,7 +195,6 @@ function prompt {
 
   # Remove first $skip folders (unless they are longer than the abbreviation would be)
   If ($skip -gt 0) {$d = If($skip -lt 2) {"$drive$($path[1])\"} Else {"$drive..$skip..\"}} Else {$d = "$drive"}
-  $nl = [Environment]::NewLine
 
   #Changes Window Title to CWD
   If ($isadmin) {
@@ -146,7 +203,7 @@ function prompt {
     $Host.ui.rawui.windowtitle = "$d$c$leaf"
   }
 
-  $promptString = "[ $folders ] $finish_folders"
+  $promptString = "$folders"
   Write-Host $promptString -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
   $promptString = "$nl$d$c$leaf"
   Write-Host $promptString -NoNewline -BackgroundColor Black -ForegroundColor White
