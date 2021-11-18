@@ -62,16 +62,10 @@ function prompt {
   $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
   $terminal_width = (Get-Host).UI.RawUI.MaxWindowSize.Width
 
-  #Desired Depth (if path is sider than terminal window)
-  $path_width = ((pwd)[0].toString().Length)
-  if($path_width -gt $terminal_width) {
-    $MAX = 1
-    $MAX = $MAX * -1
-  }
-  else {
-    $MAX = 10
-    $MAX = $MAX*-1
-  }
+  # Get path as an array of strings
+  $path = (Split-Path -path (Get-Location)).Split('\')
+  $leaf = Split-Path -leaf -path (Get-Location)
+  $max_root = $path.Length
 
   $folders = Get-ChildItem -Path (Get-Location) -Directory -ErrorAction SilentlyContinue | Select-Object Name
 
@@ -79,6 +73,7 @@ function prompt {
 
   if($folders)
   {
+    # Hide hidden folders
     $folders = $folders | Where {$_[0] -ne '.'}
 
     #Alternate implmentation of above
@@ -87,30 +82,43 @@ function prompt {
     $folders = $folders -join ", "
   }
 
+  # use list of path lengths walk up to the terminal width
+  $path_lengths = foreach ($folder in $path){($folder).Length}
+  $cur_length = 0
+  $root_count = 0
+
+  # walk down the path in reverse, accumulating string length; stop when terminal width is exceeded
+  foreach ($length in $path_lengths[$path_lengths.length..1]){
+    if ($cur_length+$length -lt ($terminal_width-"C:\..X..\".length-$leaf.length)) {
+        $cur_length = $cur_length + $length + 1
+        $root_count += 1
+    } else {
+      break
+    }
+  }
+
+  $MAX = -1 * $root_count
+
   $finish_line_later = 0
+
+  $finish_folders = " " * ($terminal_width - 1 - (($folders.length + 4) % $terminal_width))
 
   if( $folders.length + $path_width + 4 -gt $terminal_width) {
     $folder_sep = [Environment]::NewLine
-    if( $MAX -eq -10) {
-      $finish_line = " " * ($terminal_width - $path_width -1) # pad end of line with spaces
-    } else {
-      $finish_line_later = 1
-    }
-    $finish_folders = " " * ($terminal_width - 1 - (($folders.length + 4) % $terminal_width))
   } else {
     $folder_sep = ""
   }
 
-  # Get path as an array of strings
-  $t = (Split-Path -path (Get-Location)).Split('\')
-  $full_depth = $t.Count
-
+  $full_depth = $path.Count
 
   # Move the Root to $drive (Unless we're in Root)
-  $drive = If ($t[0] -ne '') {$t[0]+'\'} Else {""}
-  $a = $t[1..$t.Count]
+  $drive = If ($path[0] -ne '') {$path[0]+'\'} Else {""}
+
+  # a is driveless path, e.g., "/Users/bob/desktop"
+  $a = $path[1..$path.Count]
 
   # Slice Array and Remove Null Elements
+  #$b = ($a[$MAX..-1] | Where {$_ -ne ""})
   $b = ($a[$MAX..-1] | Where {$_ -ne ""})
 
   # MAX has to be compared with depth in a sensible way
@@ -119,32 +127,30 @@ function prompt {
   $new_depth = $b.Count
   $skip = ($full_depth - $MAX)
 
-  if($t[1].length -gt 5)
+  if($path[1].length -gt 5)
   {
-    $t[1] = "..$skip.."
+    $path[1] = "..$skip.."
   }
 
   # Join String Array Elements with '\' Unless Empty Array
   If ($new_depth) {$c = ($b -join '\')+'\'} Else {$c = ""}
 
   # Remove first $skip folders (unless they are longer than the abbreviation would be)
-  If ($skip -gt 0) {$d = If($skip -lt 2) {"$drive$($t[1])\"} Else {"$drive..$skip..\"}} Else {$d = "$drive"}
+  If ($skip -gt 0) {$d = If($skip -lt 2) {"$drive$($path[1])\"} Else {"$drive..$skip..\"}} Else {$d = "$drive"}
   $nl = [Environment]::NewLine
-  $p = Split-Path -leaf -path (Get-Location)
 
   #Changes Window Title to CWD
   If ($isadmin) {
-    $Host.ui.rawui.windowtitle = "$d$c$p [ADMIN]"
+    $Host.ui.rawui.windowtitle = "$d$c$leaf [ADMIN]"
   } Else {
-    $Host.ui.rawui.windowtitle = "$d$c$p"
+    $Host.ui.rawui.windowtitle = "$d$c$leaf"
   }
 
-  if($finish_line_later){
-    $finish_line = " " * ($terminal_width - "$d$c$p".length - 1)
-  }
-
-  $promptString = "[ $folders ] $finish_folders$d$c$p $finish_line"
+  $promptString = "[ $folders ] $finish_folders"
   Write-Host $promptString -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
+  $promptString = "$nl$d$c$leaf"
+  Write-Host $promptString -NoNewline -BackgroundColor Black -ForegroundColor White
+
   If ($isadmin) {
     return $nl+"ADMIN> "
   } Else {
