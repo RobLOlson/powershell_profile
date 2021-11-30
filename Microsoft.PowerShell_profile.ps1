@@ -9,10 +9,6 @@ else {
   Install-Module ps-autoenv
 }
 
-# Ran as Administrator?
-$IsAdmin = (New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-
-
 # powershell equivalent of touch
 function touch {
   Param(
@@ -77,7 +73,7 @@ $programming = $env:programming
 function prompt {
 
   $exit_code = $?
-
+  # Ran as Administrator?
   $IsAdmin = (New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 
   $bgcolor = "White"
@@ -206,7 +202,7 @@ function prompt {
   $promptString = "$folders"
   Write-Host $promptString -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
   $promptString = "$nl$d$c$leaf"
-  Write-Host $promptString -NoNewline -BackgroundColor Black -ForegroundColor White
+  Write-Host $promptString -NoNewLine
 
   If ($isadmin) {
     return $nl+"ADMIN> "
