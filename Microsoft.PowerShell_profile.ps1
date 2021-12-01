@@ -103,20 +103,27 @@ function prompt {
     $folders = $folders -join ", "
 
     # IF folder list requires multiple lines
-    if( $($folders.length) -gt $terminal_width) {
+    if( $($folders.length) -gt ($terminal_width-4)) {
       $folders = $folders | word-wrap
 
+      $MAX_FOLDER_LINES = 3
+
+      $folders = $folders[0..$MAX_FOLDER_LINES]
+      if($folders[$MAX_FOLDER_LINES])
+      {
+        $folders[$MAX_FOLDER_LINES] = " " * (($terminal_width-3)/2-1) + "..."
+      }
       # indent list
-      $folders[0] = "  " + $folders[0]
+      $folders[0] = " " + $folders[0]
 
       # Pad the end of each line so that the background color changes appropriately
       $i = 0
       foreach ($line in $folders){
         if($i -eq 0){
-          $folders[0] = $line + " " * ($terminal_width - $line.length)
+          $folders[0] = "cd>" + $line + " " * ($terminal_width - $line.length - 3)
         }
         else {
-          $folders[$i] = $line + " " * ($terminal_width - $line.length - 2)
+          $folders[$i] = "  " + $line + " " * ($terminal_width - $line.length - 4)
         }
         $i = $i + 1
       }
@@ -125,7 +132,7 @@ function prompt {
       $folders = $folders -join "`n  "
 
       $fake_prompt = "> cd ..." + " " * ($terminal_width -8) + "`n"
-      $folders = $fake_prompt + $folders
+      # $folders = $fake_prompt + $folders
     }
 
     # ELSE folders fit on one line
