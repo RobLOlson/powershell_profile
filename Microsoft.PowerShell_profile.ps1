@@ -83,63 +83,50 @@ function prompt {
 
   If ($exit_code) {$dummy=0} Else { $bgcolor = "Red" }
 
-  $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
-  $terminal_width = (Get-Host).UI.RawUI.MaxWindowSize.Width
 
   # Get path as an array of strings
   $path = (Split-Path -path (Get-Location)).Split('\')
   $leaf = Split-Path -leaf -path (Get-Location)
 
+  $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
+  $terminal_width = (Get-Host).UI.RawUI.MaxWindowSize.Width
+
   $folders = Get-ChildItem -Path (Get-Location) -Directory -ErrorAction SilentlyContinue | Select-Object Name
 
   $folders = $folders.name
 
+  if(!$folders) { $folders = "" }
 
-  if($folders)
-  {
-    # Hide hidden folders
-    $folders = $folders | Where {$_[0] -ne '.'}
+  # Hide hidden folders
+  $folders = $folders | Where {$_[0] -ne '.'}
 
-    $folders = $folders -join ", "
+  $folders = $folders -join ", "
 
-    # IF folder list requires multiple lines
-    if( $($folders.length) -gt ($terminal_width-4)) {
-      $folders = $folders | word-wrap
+  # IF folder list requires multiple lines
+  if( ($folders.length) -gt ($terminal_width-4)) {
+    $folders = $folders | word-wrap
 
-      $MAX_FOLDER_LINES = 3
+    $MAX_FOLDER_LINES = 3
 
-      $folders = $folders[0..$MAX_FOLDER_LINES]
-      if($folders[$MAX_FOLDER_LINES])
-      {
-        $folders[$MAX_FOLDER_LINES] = " " * (($terminal_width-3)/2-1) + "..."
-      }
-      # indent list
-      $folders[0] = " " + $folders[0]
-
-      # Pad the end of each line so that the background color changes appropriately
-      $i = 0
-      foreach ($line in $folders){
-        if($i -eq 0){
-          $folders[0] = "cd>" + $line + " " * ($terminal_width - $line.length - 3)
-        }
-        else {
-          $folders[$i] = "  " + $line + " " * ($terminal_width - $line.length - 4)
-        }
-        $i = $i + 1
-      }
-
-      # Lines must be manually joined with new-line characters to print properly
-      $folders = $folders -join "`n  "
-
-      $fake_prompt = "> cd ..." + " " * ($terminal_width -8) + "`n"
-      # $folders = $fake_prompt + $folders
+    $folders = $folders[0..$MAX_FOLDER_LINES]
+    if($folders[$MAX_FOLDER_LINES])
+    {
+      # omit excess folders with '...'
+      $folders[$MAX_FOLDER_LINES] = " " * (($terminal_width-3)/2-1) + "..."
     }
 
-    # ELSE folders fit on one line
-    else {
-      $folders = "cd> " + $folders + " " * ($terminal_width - $folders.length - 4)
+    # Pad the end of each line so that the background color changes appropriately
+    $i = 0
+    foreach ($line in $folders){
+      $folders[$i] = $line + " " * ($terminal_width - $line.length)
+      $i = $i + 1
     }
-  } else {
+
+    # Lines must be manually joined with new-line characters to print properly
+    $folders = $folders -join "`n"
+
+  }
+  else{
     $folders = "cd> " + $folders + " " * ($terminal_width - $folders.length - 4)
   }
 
