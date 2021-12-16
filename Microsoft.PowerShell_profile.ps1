@@ -9,6 +9,8 @@ else {
   Install-Module ps-autoenv
 }
 
+
+
 # powershell equivalent of touch
 function touch {
   Param(
@@ -103,7 +105,7 @@ function prompt {
   $folders = $folders -join ", "
 
   # IF folder list requires multiple lines
-  if( ($folders.length) -gt ($terminal_width-4)) {
+  if( ($folders.length) -gt ($terminal_width)) {
     $folders = $folders | word-wrap
 
     $MAX_FOLDER_LINES = 3
@@ -127,7 +129,7 @@ function prompt {
 
   }
   else{
-    $folders = "cd> " + $folders + " " * ($terminal_width - $folders.length - 4)
+    $folders = $folders + " " * ($terminal_width - $folders.length)
   }
 
   # use list of path lengths walk up to the terminal width
@@ -214,3 +216,12 @@ Function calc {
   py -ic "from sympy import init_session; init_session(use_unicode=False)"
 }
 
+# ZLocation (alias 'z') is an alternative to cd that learns important folders
+# NOTE: Import MUST be made after other prompt modifiers
+# NOTE: Commented out import because it was interfering with exit code stuff
+# if (Get-Module -ListAvailable -Name ZLocation) {
+#   import-module ZLocation
+# }
+# else {
+#   Install-Module ZLocation
+# }
