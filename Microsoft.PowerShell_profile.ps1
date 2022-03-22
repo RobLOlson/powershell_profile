@@ -9,6 +9,7 @@ else {
   Install-Module ps-autoenv
 }
 
+. 'C:\Users\sterl\OneDrive\Documents\WindowsPowerShell\autoenv.ps1'
 
 
 # powershell equivalent of touch
@@ -73,22 +74,27 @@ $programming = $env:programming
 #Changes Powershell Prompt to display CWD at limited depth
 #And automatically supply list of folders
 function prompt {
-
+  $origLastExitCode = $LASTEXITCODE
   $exit_code = $?
+  # Write-Host $global:gitpromptvalues.DollarQuestion -NoNewline
+
   # Ran as Administrator?
   $IsAdmin = (New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 
   $bgcolor = "White"
-  $nl = [Environment]::NewLine
 
   If ($IsAdmin) { $bgcolor = "Yellow" }
 
-  If ($exit_code) {$dummy=0} Else { $bgcolor = "Red" }
+  If ($exit_code) {} Else { $bgcolor = "Red" }
+
+  if($env:VIRTUAL_ENV) {$bgcolor = "Green"}
+
 
 
   # Get path as an array of strings
-  $path = (Split-Path -path (Get-Location)).Split('\')
   $leaf = Split-Path -leaf -path (Get-Location)
+  $path = @(Split-Path -path (Get-Location)).Split('\') + $leaf
+  $drive = $path[0]
 
   $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
   $terminal_width = (Get-Host).UI.RawUI.MaxWindowSize.Width
@@ -102,6 +108,7 @@ function prompt {
   # Hide hidden folders
   $folders = $folders | Where {$_[0] -ne '.'}
 
+  $folders_list = @($folders)
   $folders = $folders -join ", "
 
   # IF folder list requires multiple lines
@@ -132,96 +139,100 @@ function prompt {
     $folders = $folders + " " * ($terminal_width - $folders.length)
   }
 
-  # use list of path lengths walk up to the terminal width
-  $path_lengths = foreach ($folder in $path){($folder).Length}
-  $cur_length = 0
-  $root_count = 0
 
-  # walk down the path in reverse, accumulating string length; stop when terminal width is exceeded
-  foreach ($length in $path_lengths[$path_lengths.length..1]){
-    if ($cur_length+$length -lt ($terminal_width-"C:\..X..\".length-$leaf.length)) {
-        $cur_length = $cur_length + $length + 1
-        $root_count += 1
-    } else {
-      break
+  # If CWD is too long, try using '~''
+  if(($path -join '\').length -gt $terminal_width){
+    $shortpath = @('~')+@($path[3..256])
+    if(($shortpath -join '\').length -lt $terminal_width){
+      $path = $shortpath
     }
   }
 
-  $MAX = -1 * $root_count
-
-  $finish_line_later = 0
-
-  $finish_folders = " " * ($terminal_width - 1 - (($folders.length + 4) % $terminal_width))
-
-  if( $folders.length + $path_width + 4 -gt $terminal_width) {
-    $folder_sep = [Environment]::NewLine
-  } else {
-    $folder_sep = ""
+  # If CWD is STILL too long, use C:\..N..\
+  $cut_count = 1
+  while(($path -join '\').length -gt $terminal_width){
+    $cut_count += 1
+    $cut_string = '..'+$cut_count+'..'
+    $path = @($drive, $cut_string)+$path[3..256]
   }
-
-  $full_depth = $path.Count
-
-  # Move the Root to $drive (Unless we're in Root)
-  $drive = If ($path[0] -ne '') {$path[0]+'\'} Else {""}
-
-  # a is driveless path, e.g., "/Users/bob/desktop"
-  $a = $path[1..$path.Count]
-
-  # Slice Array and Remove Null Elements
-  #$b = ($a[$MAX..-1] | Where {$_ -ne ""})
-  $b = ($a[$MAX..-1] | Where {$_ -ne ""})
-
-  # MAX has to be compared with depth in a sensible way
-  $MAX = $MAX * -1
-  $MAX += 1
-  $new_depth = $b.Count
-  $skip = ($full_depth - $MAX)
-
-  if($path[1].length -gt 5)
-  {
-    $path[1] = "..$skip.."
-  }
-
-  # Join String Array Elements with '\' Unless Empty Array
-  If ($new_depth) {$c = ($b -join '\')+'\'} Else {$c = ""}
-
-  # Remove first $skip folders (unless they are longer than the abbreviation would be)
-  If ($skip -gt 0) {$d = If($skip -lt 2) {"$drive$($path[1])\"} Else {"$drive..$skip..\"}} Else {$d = "$drive"}
 
   #Changes Window Title to CWD
   If ($isadmin) {
-    $Host.ui.rawui.windowtitle = "$d$c$leaf [ADMIN]"
+    $Host.ui.rawui.windowtitle = "$leaf [ADMIN]"
   } Else {
-    $Host.ui.rawui.windowtitle = "$d$c$leaf"
+    $Host.ui.rawui.windowtitle = "$leaf"
   }
 
-  $promptString = "$folders"
-  Write-Host $promptString -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
-  $promptString = "$nl$d$c$leaf"
-  Write-Host $promptString -NoNewLine
+  Write-Host $folders -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
+
+  # print venv path, if exists
+  # !! setx VIRTUAL_ENV_DISABLE_PROMPT $true to disable pre-packaged prompt modifiers !!
+  if ($env:VIRTUAL_ENV){
+    # If virtual env path is too long, try collapsing '~'
+    if($env:VIRTUAL_ENV.length -gt $terminal_width){
+      $subs = @($env:VIRTUAL_ENV -split "\\")
+      $subs = $subs[3..256] -join '\'
+      Write-Host ~\$subs -ForegroundColor Green
+    } else {
+      Write-Host $env:VIRTUAL_ENV -ForegroundColor Green
+    }
+  }
+
+  # Arrays are normally immutable, so create a mutable 'ArrayList'
+  [System.Collections.ArrayList]$path2=$path
+  $path2.remove($leaf)
+  Write-host ($path2 -join '\') -NoNewLine
+  Write-host \ -NoNewLine
+  Write-Host $leaf -BackgroundColor Black -ForegroundColor Yellow
 
   If ($isadmin) {
-    return $nl+"ADMIN> "
-  } Else {
-    return "$nl> "
+    Write-Host "(ADMIN)" -ForegroundColor Yellow -NoNewLine
   }
-  return "$nl> "
+
+  # invoke posh-git to finalize prompt
+  & $GitPromptScriptBlock
+  return "> "
 }
 
+function global:PromptWriteErrorInfo() {
+    if ($global:GitPromptValues.DollarQuestion) { return }
+
+    if ($global:GitPromptValues.LastExitCode) {
+        "`e[31m(" + $global:GitPromptValues.LastExitCode + ") `e[0m"
+    }
+    else {
+        "`e[31m! `e[0m"
+    }
+}
+
+# $global:GitPromptSettings.DefaultPromptBeforeSuffix.Text = '`n$(PromptWriteErrorInfo)$([DateTime]::now.ToString("MM-dd HH:mm:ss"))'
+
 # Adds tab completion for git commands
-Import-Module 'C:\tools\poshgit\dahlbyk-posh-git-9bda399\src\posh-git.psd1'
+# Import-Module 'C:\tools\poshgit\dahlbyk-posh-git-9bda399\src\posh-git.psd1'
+# Import-Module posh-git
+
+if (Get-Module -ListAvailable -Name posh-git) {
+  import-module posh-git
+  $GitPromptSettings.DefaultPromptPath = ""
+  $GitPromptSettings.PathStatusSeparator = ""
+}
+else {
+  Install-Module posh-git
+}
 
 # Use python+sympy as a symbolic calculator
 Function calc {
   py -ic "from sympy import init_session; init_session(use_unicode=False)"
 }
 
+
 # ZLocation (alias 'z') is an alternative to cd that learns important folders
 # NOTE: Import MUST be made after other prompt modifiers
 # NOTE: Commented out import because it was interfering with exit code stuff
-# if (Get-Module -ListAvailable -Name ZLocation) {
-#   import-module ZLocation
-# }
-# else {
-#   Install-Module ZLocation
-# }
+if (Get-Module -ListAvailable -Name ZLocation) {
+  import-module ZLocation
+  New-Alias -Name a -Value z
+}
+else {
+  Install-Module ZLocation
+}
