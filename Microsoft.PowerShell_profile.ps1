@@ -9,9 +9,6 @@ else {
   Install-Module ps-autoenv
 }
 
-. 'C:\Users\sterl\OneDrive\Documents\WindowsPowerShell\autoenv.ps1'
-
-
 # powershell equivalent of touch
 function touch {
   Param(
@@ -40,29 +37,29 @@ Function env {
 
 
 function word-wrap {
-    [CmdletBinding()]
-    Param(
-        [parameter(Mandatory=1,ValueFromPipeline=1,ValueFromPipelineByPropertyName=1)]
-        [Object[]]$chunk
-    )
-    PROCESS {
-        $Lines = @()
-        foreach ($line in $chunk) {
-            $str = ''
-            $counter = 0
-            $line -split '\s+' | %{
-                $counter += $_.Length + 1
-                if ($counter -gt $Host.UI.RawUI.BufferSize.Width-2) {
-                    $Lines += ,$str.trim()
-                    $str = ''
-                    $counter = $_.Length + 1
-                }
-                $str = "$str$_ "
-            }
-            $Lines += ,$str.trim()
+  [CmdletBinding()]
+  Param(
+    [parameter(Mandatory=1,ValueFromPipeline=1,ValueFromPipelineByPropertyName=1)]
+    [Object[]]$chunk
+  )
+  PROCESS {
+    $Lines = @()
+    foreach ($line in $chunk) {
+      $str = ''
+      $counter = 0
+      $line -split '\s+' | %{
+        $counter += $_.Length + 1
+        if ($counter -gt $Host.UI.RawUI.BufferSize.Width-2) {
+          $Lines += ,$str.trim()
+          $str = ''
+          $counter = $_.Length + 1
         }
-        $Lines
+        $str = "$str$_ "
+      }
+      $Lines += ,$str.trim()
     }
+    $Lines
+  }
 }
 
 #open new terminals at project
@@ -111,6 +108,17 @@ function prompt {
   $folders_list = @($folders)
   $folders = $folders -join ", "
 
+  # Adjust environment folder display if exists
+  if($env:VIRTUAL_ENV){
+    if($folders.contains((Split-path -path $env:VIRTUAL_ENV -leaf))){
+      $folders = $folders.replace((Split-Path -path $env:VIRTUAL_ENV -leaf), ("[*"+(Split-Path -path $env:VIRTUAL_ENV -leaf)+"]"))
+      $skip_env_line = $true
+    }
+    if((Split-path -path (Get-Location))-eq(Split-path -path $env:VIRTUAL_ENV)){
+      $skip_env_line = $true
+    }
+  }
+
   # IF folder list requires multiple lines
   if( ($folders.length) -gt ($terminal_width)) {
     $folders = $folders | word-wrap
@@ -156,7 +164,6 @@ function prompt {
     $path = @($drive, $cut_string)+$path[3..256]
   }
 
-  #Changes Window Title to CWD
   If ($isadmin) {
     $Host.ui.rawui.windowtitle = "$leaf [ADMIN]"
   } Else {
@@ -165,18 +172,28 @@ function prompt {
 
   Write-Host $folders -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
 
-  # print venv path, if exists
+  # print venv path, if exists (and desired)
   # !! setx VIRTUAL_ENV_DISABLE_PROMPT $true to disable pre-packaged prompt modifiers !!
-  if ($env:VIRTUAL_ENV){
+  $vdirs = @($env:VIRTUAL_ENV -split "\\")
+  $vdirs = @('~')+$vdirs[3..256]
+  if ($env:VIRTUAL_ENV -and !$skip_env_line)
+  {
     # If virtual env path is too long, try collapsing '~'
     if($env:VIRTUAL_ENV.length -gt $terminal_width){
-      $subs = @($env:VIRTUAL_ENV -split "\\")
-      $subs = $subs[3..256] -join '\'
-      Write-Host ~\$subs -ForegroundColor Green
+      # $vdirs = $vdirs -join '\'
+      Write-Host ($vdirs -join '\') -ForegroundColor Green
     } else {
       Write-Host $env:VIRTUAL_ENV -ForegroundColor Green
     }
   }
+
+  # if($env:VIRTUAL_ENV){
+  #   [System.Collections.ArrayList]$env2 = ($env:VIRTUAL_ENV -split '\\')
+  #   $env2.removeat($($env2).length-1)
+  #   if($env2 -eq $path) {
+  #     Write-Host DLFKJDLSKFJ
+  #   }
+  # }
 
   # Arrays are normally immutable, so create a mutable 'ArrayList'
   [System.Collections.ArrayList]$path2=$path
@@ -194,23 +211,7 @@ function prompt {
   return "> "
 }
 
-function global:PromptWriteErrorInfo() {
-    if ($global:GitPromptValues.DollarQuestion) { return }
-
-    if ($global:GitPromptValues.LastExitCode) {
-        "`e[31m(" + $global:GitPromptValues.LastExitCode + ") `e[0m"
-    }
-    else {
-        "`e[31m! `e[0m"
-    }
-}
-
-# $global:GitPromptSettings.DefaultPromptBeforeSuffix.Text = '`n$(PromptWriteErrorInfo)$([DateTime]::now.ToString("MM-dd HH:mm:ss"))'
-
-# Adds tab completion for git commands
-# Import-Module 'C:\tools\poshgit\dahlbyk-posh-git-9bda399\src\posh-git.psd1'
-# Import-Module posh-git
-
+# Adds tab completion for git commands and git-integrated prompt
 if (Get-Module -ListAvailable -Name posh-git) {
   import-module posh-git
   $GitPromptSettings.DefaultPromptPath = ""
