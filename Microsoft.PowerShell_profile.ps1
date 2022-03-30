@@ -2,11 +2,22 @@
 
 #automatically manages virtual environments upon entering/exiting a folder
 
+# $PSDefaultParameterValues = @{ '*:Encoding' = 'utf8' }
+
+Set-PSReadLineOption -PredictionSource History
+
 if (Get-Module -ListAvailable -Name ps-autoenv) {
   import-module ps-autoenv
 }
 else {
   Install-Module ps-autoenv
+}
+
+if (Get-Module -ListAvailable -Name PSReadLine) {
+  import-module PSReadLine
+}
+else {
+  Install-Module PSReadLine -RequiredVersion 2.2.2
 }
 
 # powershell equivalent of touch
