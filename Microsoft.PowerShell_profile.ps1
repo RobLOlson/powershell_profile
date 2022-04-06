@@ -102,6 +102,8 @@ function prompt {
   # Get path as an array of strings
   $leaf = Split-Path -leaf -path (Get-Location)
   $path = @(Split-Path -path (Get-Location)).Split('\') + $leaf
+  $path = @($path | where {$_})
+
   $drive = $path[0]
 
   $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
@@ -207,11 +209,16 @@ function prompt {
   # }
 
   # Arrays are normally immutable, so create a mutable 'ArrayList'
-  [System.Collections.ArrayList]$path2=$path
+  [System.Collections.ArrayList]$path2=@($path)
   $path2.remove($leaf)
-  Write-host ($path2 -join '\') -NoNewLine
-  Write-host \ -NoNewLine
-  Write-Host $leaf -BackgroundColor Black -ForegroundColor Yellow
+  if($path2.length -gt 1){
+    Write-host ($path2 -join '\') -NoNewLine
+    Write-host \ -NoNewLine
+    Write-Host $leaf -BackgroundColor Black -ForegroundColor Yellow
+  }
+  else{
+    Write-host $path
+  }
 
   If ($isadmin) {
     Write-Host "(ADMIN)" -ForegroundColor Yellow -NoNewLine
