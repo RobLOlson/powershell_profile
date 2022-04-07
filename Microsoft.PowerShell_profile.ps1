@@ -13,6 +13,7 @@ else {
   Install-Module ps-autoenv
 }
 
+# Updated version of PSReadLine gives line completion
 if (Get-Module -ListAvailable -Name PSReadLine) {
   import-module PSReadLine
 }
@@ -161,8 +162,8 @@ function prompt {
   }
 
 
-  # If CWD is too long, try using '~''
-  if(($path -join '\').length -gt $terminal_width){
+  # If CWD is too long, try using '~'
+  if(($path -join '\').length -gt $terminal_width -and "users" -in $path){
     $shortpath = @('~')+@($path[3..256])
     if(($shortpath -join '\').length -lt $terminal_width){
       $path = $shortpath
