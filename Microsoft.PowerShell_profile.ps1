@@ -79,6 +79,7 @@ $project = $env:project
 $desktop = $env:desktop
 $downloads = $env:downloads
 $programming = $env:programming
+$appdata = $home +  "\AppData\Local"
 
 #Changes Powershell Prompt to display CWD at limited depth
 #And automatically supply list of folders
@@ -98,7 +99,7 @@ function prompt {
 
   if($env:VIRTUAL_ENV) {$bgcolor = "Green"}
 
-
+  $tasks = Get-Content -Path ($appdata+'\robolson\tick\tasks.txt') -ErrorAction SilentlyContinue
 
   # Get path as an array of strings
   $leaf = Split-Path -leaf -path (Get-Location)
@@ -182,6 +183,12 @@ function prompt {
     $Host.ui.rawui.windowtitle = "$leaf [ADMIN]"
   } Else {
     $Host.ui.rawui.windowtitle = "$leaf"
+  }
+
+  if($tasks){
+    $tasks = $tasks -join ", "
+    $tasks = $tasks + " " * ($terminal_width - $tasks.length)
+    Write-Host $tasks -NoNewline -BackgroundColor Red -ForegroundColor Black
   }
 
   Write-Host $folders -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
