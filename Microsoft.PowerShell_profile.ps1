@@ -59,7 +59,7 @@ Function env {
 }
 
 
-function word-wrap {
+function word_wrap {
   [CmdletBinding()]
   Param(
     [parameter(Mandatory=1,ValueFromPipeline=1,ValueFromPipelineByPropertyName=1)]
@@ -70,7 +70,7 @@ function word-wrap {
     foreach ($line in $chunk) {
       $str = ''
       $counter = 0
-      $line -split '\s+' | %{
+      $line -split '\s+' | ForEach-Object{
         $counter += $_.Length + 1
         if ($counter -gt $Host.UI.RawUI.BufferSize.Width-2) {
           $Lines += ,$str.trim()
@@ -115,11 +115,12 @@ function prompt {
   # Get path as an array of strings
   $leaf = Split-Path -leaf -path (Get-Location)
   $path = @(Split-Path -path (Get-Location)).Split('\') + $leaf
-  $path = @($path | where {$_})
+  $path = @($path | Where-Object {$_})
 
   $drive = $path[0]
 
-  $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
+  # below not used?? delete if nothing breaks
+  # $terminal_height = (Get-Host).UI.RawUI.MaxWindowSize.Height
   $terminal_width = (Get-Host).UI.RawUI.MaxWindowSize.Width
 
   $folders = Get-ChildItem -Path (Get-Location) -Directory -ErrorAction SilentlyContinue | Select-Object Name
@@ -129,9 +130,10 @@ function prompt {
   if(!$folders) { $folders = "" }
 
   # Hide hidden folders
-  $folders = $folders | Where {$_[0] -ne '.'}
+  $folders = $folders | Where-Object {$_[0] -ne '.'}
 
-  $folders_list = @($folders)
+  # below not used??  Delete if nothing breaks
+  # $folders_list = @($folders)
   $folders = $folders -join ", "
 
   # Adjust environment folder display if exists
@@ -147,7 +149,7 @@ function prompt {
 
   # IF folder list requires multiple lines
   if( ($folders.length) -gt ($terminal_width)) {
-    $folders = $folders | word-wrap
+    $folders = $folders | word_wrap
 
     $MAX_FOLDER_LINES = 3
 
