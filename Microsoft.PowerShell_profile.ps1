@@ -42,6 +42,10 @@ New-Alias -Name cat -Value rich
 # New-Alias -Name pactivate -Value '."$(poetry env info --path)\Scripts\activate.ps1"'
 # New-Alias -Name pactivate -Value '(. "$(poetry env info --path)\Scripts\activate.ps1")'
 
+function email {
+  py -m robo.rob.email $args
+}
+
 # custom alias for activating the default poetry venv
 function pactivate {
   . "$(poetry env info --path)\Scripts\activate.ps1"
