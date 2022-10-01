@@ -4,7 +4,7 @@
 
 # $PSDefaultParameterValues = @{ '*:Encoding' = 'utf8' }
 
-Set-PSReadLineOption -PredictionSource History
+Set-PSReadLineOption -PredictionSource History # Raises Error when Powershell is RE-loaded.  Why?!
 
 if (Get-Module -ListAvailable -Name ps-autoenv) {
   import-module ps-autoenv
@@ -21,6 +21,8 @@ else {
   Install-Module PSReadLine -RequiredVersion 2.2.2
 }
 
+Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
+
 # ZLocation (alias 'z') is an alternative to cd that learns important folders
 # NOTE: Import MUST be made after other prompt modifiers
 # NOTE: Commented out import because it was interfering with exit code stuff
@@ -30,6 +32,31 @@ if (Get-Module -ListAvailable -Name ZLocation) {
 }
 else {
   Install-Module ZLocation
+}
+
+# Use python "rich" library for CLI printing
+Remove-Alias -Name cat
+New-Alias -Name cat -Value rich
+
+#
+# New-Alias -Name pactivate -Value '."$(poetry env info --path)\Scripts\activate.ps1"'
+# New-Alias -Name pactivate -Value '(. "$(poetry env info --path)\Scripts\activate.ps1")'
+
+# custom alias for activating the default poetry venv
+function pactivate {
+  . "$(poetry env info --path)\Scripts\activate.ps1"
+}
+
+# Use python 'zipfile' module to unzip .zip files
+function unzip {
+  Param(
+    [Parameter(Mandatory=$true)]
+    [string]$Path
+  )
+
+  $file = Get-Item -Path $Path
+
+  py -m zipfile -e $file $file.Name.Split('.')[0]
 }
 
 # powershell equivalent of touch
