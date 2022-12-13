@@ -4,8 +4,6 @@
 
 # $PSDefaultParameterValues = @{ '*:Encoding' = 'utf8' }
 
-Set-PSReadLineOption -PredictionSource History # Raises Error when Powershell is RE-loaded.  Why?!
-
 if (Get-Module -ListAvailable -Name ps-autoenv) {
   import-module ps-autoenv
 }
@@ -21,13 +19,15 @@ else {
   Install-Module PSReadLine -RequiredVersion 2.2.2
 }
 
+Set-PSReadLineOption -PredictionSource History # Raises Error if PSReadLine version is not > 2.0.0, requires new Install-Module
+
 Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
 
 # ZLocation (alias 'z') is an alternative to cd that learns important folders
 # NOTE: Import MUST be made after other prompt modifiers
 # NOTE: Commented out import because it was interfering with exit code stuff
 if (Get-Module -ListAvailable -Name ZLocation) {
-  import-module ZLocation
+  # import-zmodule ZLocation
   New-Alias -Name a -Value z
 }
 else {
@@ -54,7 +54,7 @@ function pactivate {
 # Use python 'zipfile' module to unzip .zip files
 function unzip {
   Param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$Path
   )
 
@@ -66,13 +66,14 @@ function unzip {
 # powershell equivalent of touch
 function touch {
   Param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$Path
   )
 
   if (Test-Path -LiteralPath $Path) {
     (Get-Item -Path $Path).LastWriteTime = Get-Date
-  } else {
+  }
+  else {
     New-Item -Type File -Path $Path
   }
 }
@@ -93,7 +94,7 @@ Function env {
 function word_wrap {
   [CmdletBinding()]
   Param(
-    [parameter(Mandatory=1,ValueFromPipeline=1,ValueFromPipelineByPropertyName=1)]
+    [parameter(Mandatory = 1, ValueFromPipeline = 1, ValueFromPipelineByPropertyName = 1)]
     [Object[]]$chunk
   )
   PROCESS {
@@ -101,16 +102,16 @@ function word_wrap {
     foreach ($line in $chunk) {
       $str = ''
       $counter = 0
-      $line -split '\s+' | ForEach-Object{
+      $line -split '\s+' | ForEach-Object {
         $counter += $_.Length + 1
-        if ($counter -gt $Host.UI.RawUI.BufferSize.Width-2) {
-          $Lines += ,$str.trim()
+        if ($counter -gt $Host.UI.RawUI.BufferSize.Width - 2) {
+          $Lines += , $str.trim()
           $str = ''
           $counter = $_.Length + 1
         }
         $str = "$str$_ "
       }
-      $Lines += ,$str.trim()
+      $Lines += , $str.trim()
     }
     $Lines
   }
@@ -121,7 +122,7 @@ $project = $env:project
 $desktop = $env:desktop
 $downloads = $env:downloads
 $programming = $env:programming
-$appdata = $home +  "\AppData\Local"
+$appdata = $home + "\AppData\Local"
 
 #Changes Powershell Prompt to display CWD at limited depth
 #And automatically supply list of folders
@@ -139,14 +140,14 @@ function prompt {
 
   If ($exit_code) {} Else { $bgcolor = "Red" }
 
-  if($env:VIRTUAL_ENV) {$bgcolor = "Green"}
+  if ($env:VIRTUAL_ENV) { $bgcolor = "Green" }
 
-  $tasks = Get-Content -Path ($appdata+'\robolson\tick\tasks.txt') -ErrorAction SilentlyContinue
+  $tasks = Get-Content -Path ($appdata + '\robolson\tick\tasks.txt') -ErrorAction SilentlyContinue
 
   # Get path as an array of strings
   $leaf = Split-Path -leaf -path (Get-Location)
   $path = @(Split-Path -path (Get-Location)).Split('\') + $leaf
-  $path = @($path | Where-Object {$_})
+  $path = @($path | Where-Object { $_ })
 
   $drive = $path[0]
 
@@ -158,42 +159,41 @@ function prompt {
 
   $folders = $folders.name
 
-  if(!$folders) { $folders = "" }
+  if (!$folders) { $folders = "" }
 
   # Hide hidden folders
-  $folders = $folders | Where-Object {$_[0] -ne '.'}
+  $folders = $folders | Where-Object { $_[0] -ne '.' }
 
   # below not used??  Delete if nothing breaks
   # $folders_list = @($folders)
   $folders = $folders -join ", "
 
   # Adjust environment folder display if exists
-  if($env:VIRTUAL_ENV){
-    if($folders.contains((Split-path -path $env:VIRTUAL_ENV -leaf))){
-      $folders = $folders.replace((Split-Path -path $env:VIRTUAL_ENV -leaf), ("[*"+(Split-Path -path $env:VIRTUAL_ENV -leaf)+"]"))
+  if ($env:VIRTUAL_ENV) {
+    if ($folders.contains((Split-path -path $env:VIRTUAL_ENV -leaf))) {
+      $folders = $folders.replace((Split-Path -path $env:VIRTUAL_ENV -leaf), ("[*" + (Split-Path -path $env:VIRTUAL_ENV -leaf) + "]"))
       $skip_env_line = $true
     }
-    if((Split-path -path (Get-Location))-eq(Split-path -path $env:VIRTUAL_ENV)){
+    if ((Split-path -path (Get-Location)) -eq (Split-path -path $env:VIRTUAL_ENV)) {
       $skip_env_line = $true
     }
   }
 
   # IF folder list requires multiple lines
-  if( ($folders.length) -gt ($terminal_width)) {
+  if ( ($folders.length) -gt ($terminal_width)) {
     $folders = $folders | word_wrap
 
     $MAX_FOLDER_LINES = 3
 
     $folders = $folders[0..$MAX_FOLDER_LINES]
-    if($folders[$MAX_FOLDER_LINES])
-    {
+    if ($folders[$MAX_FOLDER_LINES]) {
       # omit excess folders with '...'
-      $folders[$MAX_FOLDER_LINES] = " " * (($terminal_width-3)/2-1) + "..."
+      $folders[$MAX_FOLDER_LINES] = " " * (($terminal_width - 3) / 2 - 1) + "..."
     }
 
     # Pad the end of each line so that the background color changes appropriately
     $i = 0
-    foreach ($line in $folders){
+    foreach ($line in $folders) {
       $folders[$i] = $line + " " * ($terminal_width - $line.length)
       $i = $i + 1
     }
@@ -202,36 +202,37 @@ function prompt {
     $folders = $folders -join "`n"
 
   }
-  else{
+  else {
     $folders = $folders + " " * ($terminal_width - $folders.length)
   }
 
 
   # If CWD is too long, try using '~'
-  if(($path -join '\').length -gt $terminal_width -and "users" -in $path){
-    $shortpath = @('~')+@($path[3..256])
-    if(($shortpath -join '\').length -lt $terminal_width){
+  if (($path -join '\').length -gt $terminal_width -and "users" -in $path) {
+    $shortpath = @('~') + @($path[3..256])
+    if (($shortpath -join '\').length -lt $terminal_width) {
       $path = $shortpath
     }
   }
 
   # If CWD is STILL too long, use C:\..N..\
   $cut_count = 1
-  while(($path -join '\').length -gt $terminal_width){
+  while (($path -join '\').length -gt $terminal_width) {
     $cut_count += 1
-    $cut_string = '..'+$cut_count+'..'
-    $path = @($drive, $cut_string)+$path[3..256]
+    $cut_string = '..' + $cut_count + '..'
+    $path = @($drive, $cut_string) + $path[3..256]
   }
 
   If ($isadmin) {
     $Host.ui.rawui.windowtitle = "$leaf [ADMIN]"
-  } Else {
+  }
+  Else {
     $Host.ui.rawui.windowtitle = "$leaf"
   }
 
-  if($tasks){
+  if ($tasks) {
     $tasks = $tasks -join ", "
-    if($tasks.length -gt $terminal_width){
+    if ($tasks.length -gt $terminal_width) {
       $tasks = $tasks[0..($terminal_width - 4)] -join ""
       $tasks = $tasks + "..."
     }
@@ -244,14 +245,14 @@ function prompt {
   # print venv path, if exists (and desired)
   # !! setx VIRTUAL_ENV_DISABLE_PROMPT $true to disable pre-packaged prompt modifiers !!
   $vdirs = @($env:VIRTUAL_ENV -split "\\")
-  $vdirs = @('~')+$vdirs[3..256]
-  if ($env:VIRTUAL_ENV -and !$skip_env_line)
-  {
+  $vdirs = @('~') + $vdirs[3..256]
+  if ($env:VIRTUAL_ENV -and !$skip_env_line) {
     # If virtual env path is too long, try collapsing '~'
-    if($env:VIRTUAL_ENV.length -gt $terminal_width){
+    if ($env:VIRTUAL_ENV.length -gt $terminal_width) {
       # $vdirs = $vdirs -join '\'
       Write-Host ($vdirs -join '\') -ForegroundColor Green
-    } else {
+    }
+    else {
       Write-Host $env:VIRTUAL_ENV -ForegroundColor Green
     }
   }
@@ -265,14 +266,14 @@ function prompt {
   # }
 
   # Arrays are normally immutable, so create a mutable 'ArrayList'
-  [System.Collections.ArrayList]$path2=@($path)
+  [System.Collections.ArrayList]$path2 = @($path)
   $path2.remove($leaf)
-  if($path2.length -gt 1){
+  if ($path2.length -gt 1) {
     Write-host ($path2 -join '\') -NoNewLine
     Write-host \ -NoNewLine
     Write-Host $leaf -BackgroundColor Black -ForegroundColor Yellow
   }
-  else{
+  else {
     Write-host $path
   }
 
