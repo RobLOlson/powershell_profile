@@ -41,11 +41,11 @@ New-Alias -Name cat -Value rich
 
 # use ls DELUXE (config file located at "%appdata%\lsd") d/l @ https://github.com/Peltoche/lsd
 Remove-Alias -Name ls
-New-Alias -Name ls -Value lsd
+# New-Alias -Name ls -Value lsd
 function ll {
   lsd --long $args
 }
-function la {
+function ls {
   lsd --all $args
 }
 function lal {
