@@ -20,8 +20,20 @@ else {
 }
 
 Set-PSReadLineOption -PredictionSource History # Raises Error if PSReadLine version is not > 2.0.0, requires new Install-Module
-
 Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
+
+# If you are using the version of PSReadLine that ships with PowerShell 6+ versions, you need to run: <path-to-pwsh-executable> -noprofile -command "Install-Module PSReadLine -Force -SkipPublisherCheck -AllowPrerelease"
+Set-PSReadLineOption -PredictionViewStyle ListView
+
+
+# choco install fzf
+if (Get-Module -ListAvailable -Name psfzf) {
+  import-module psfzf
+}
+else {
+  Install-Module psfzf
+}
+Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
 
 # ZLocation (alias 'z') is an alternative to cd that learns important folders
 # NOTE: Import MUST be made after other prompt modifiers
@@ -51,7 +63,6 @@ function ls {
 function lal {
   lsd --long --all $args
 }
-
 
 
 function email {
@@ -88,6 +99,12 @@ function touch {
   else {
     New-Item -Type File -Path $Path
   }
+}
+
+# Utility Command that tells you where the absolute path of commandlets are
+function which ($command) {
+  Get-Command -Name $command -ErrorAction SilentlyContinue |
+  Select-Object -ExpandProperty Path -ErrorAction SilentlyContinue
 }
 
 # Allows you to use Bash commands without wsl
@@ -445,3 +462,4 @@ function Invoke-Starship-PreCommand {
 
 # ^^^^^^^^^^^^^^^^^^^
 # STARSHIP PROMPT END
+
