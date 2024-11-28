@@ -54,6 +54,10 @@ New-Alias -Name cat -Value rich
 # use ls DELUXE (config file located at "%appdata%\lsd") d/l @ https://github.com/Peltoche/lsd
 Remove-Alias -Name ls
 # New-Alias -Name ls -Value lsd
+function ls{
+  lsd --config-file "C:\Users\sterl\.config\lsd\lsd_config.yaml" $args
+}
+
 function ll {
   lsd --long $args
 }
@@ -155,6 +159,9 @@ $appdata = $home + "\AppData\Local"
 
 #Changes Powershell Prompt to display CWD at limited depth
 #And automatically supply list of folders
+
+
+
 function prompt {
   $origLastExitCode = $LASTEXITCODE
   $exit_code = $?
@@ -343,6 +350,8 @@ function Invoke-Starship-TransientFunction {
   &starship module character
 }
 
+
+<#
 function Invoke-Starship-PreCommand {
   $origLastExitCode = $LASTEXITCODE
   $exit_code = $?
@@ -460,6 +469,12 @@ function Invoke-Starship-PreCommand {
   Write-Host $folders -NoNewline -BackgroundColor $bgcolor -ForegroundColor Black
 }
 
+#>
+
+# Custom PreCommand
+# function Invoke-Starship-PreCommand {
+#     $host.ui.Write("🚀")
+# }
+
 # ^^^^^^^^^^^^^^^^^^^
 # STARSHIP PROMPT END
-
