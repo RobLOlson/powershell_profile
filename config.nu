@@ -911,7 +911,8 @@ $env.config = {
 
 source ~/.zoxide.nu
 
-use ~/.cache/starship/init.nu
+# use ~/.cache/starship/init.nu
+use ~/OneDrive/Documents/Powershell/init.nu
 use ~/OneDrive/Documents/Powershell/git-completions.nu *
 use ~/OneDrive/Documents/Powershell/poetry-completions.nu *
 use ~/OneDrive/Documents/Powershell/pytest-completions.nu *
