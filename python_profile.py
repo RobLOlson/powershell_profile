@@ -2,6 +2,7 @@
 Point your $PYTHONSTARTUP environment variable at this file."""
 
 import os
+import pdb
 import sys
 from functools import reduce
 
@@ -13,6 +14,7 @@ pretty.install()
 rich.traceback.install()
 
 dir = inspect
+
 
 os.environ["PYTHONBREAKPOINT"] = "pdbr.set_trace"
 
