@@ -1,4 +1,5 @@
 ﻿//This is a config file for Nilesoft Shell found at nilesoft.org
+//This file should be located at `C:\Program Files\Nilesoft Shell`
 
 settings
 {
